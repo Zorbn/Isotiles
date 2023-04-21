@@ -3,6 +3,9 @@ local grass = love.graphics.newImage("grass.png")
 local GRID_SIZE = 20
 local GRID_CENTER_X = 400
 local GRID_CENTER_Y = 300
+local GRID_MAX_Z = 2
+local GRID_Z_SHADE_MIN = 0.7
+local GRID_Z_SHADE_STEP = (1.0 - GRID_Z_SHADE_MIN) / GRID_MAX_Z
 
 local BLOCK_WIDTH = grass:getWidth()
 local BLOCK_HEIGHT = grass:getHeight()
@@ -11,7 +14,7 @@ local BLOCK_DEPTH = BLOCK_HEIGHT / 2
 local function toScreenPosition(x, y, z)
     local screenX = GRID_CENTER_X + ((y - x) * BLOCK_WIDTH / 2)
     local screenY = GRID_CENTER_Y + ((x + y) * BLOCK_DEPTH / 2) - (BLOCK_DEPTH * GRID_SIZE / 2) - BLOCK_DEPTH * z
-    
+
     return screenX, screenY
 end
 
@@ -80,14 +83,26 @@ for z = 1, GRID_SIZE do
     end
 end
 
+local function getGridTile(x, y, z)
+    x = math.floor(x)
+    y = math.floor(y)
+    z = math.floor(z)
+
+    if x < 1 or x > GRID_SIZE or y < 1 or y > GRID_SIZE or z < 1 or z > GRID_SIZE then
+        return 0
+    end
+    
+    return grid[z][x][y]
+end
+
 for x = 1, GRID_SIZE do
     for y = 1, GRID_SIZE do
         grid[1][x][y] = 1
     end
 end
 
-for x = 1, GRID_SIZE / 2 do
-    for y = 1, GRID_SIZE / 2 do
+for x = 2, GRID_SIZE / 2 do
+    for y = 2, GRID_SIZE / 2 do
         grid[2][x][y] = 1
     end
 end
@@ -129,30 +144,38 @@ function love.update(dt)
         dx = dx - 1
         dy = dy + 1
     end
-    
+
     local currentSpeed = love.keyboard.isDown("lshift") and 2 or 1
     currentSpeed = currentSpeed * playerSpeed
 
     if dx ~= 0 or dy ~= 0 then
         local magnitude = math.sqrt(dx ^ 2 + dy ^ 2)
         dx, dy = dx / magnitude, dy / magnitude
-        playerX = playerX + currentSpeed * dt * dx
-        playerY = playerY + currentSpeed * dt * dy
+
+        local nextPlayerX = playerX + currentSpeed * dt * dx
+        if getGridTile(nextPlayerX + (dx > 0 and 1 or 0), playerY, playerZ) ~= 0 then
+            nextPlayerX = playerX
+        end
+        playerX = nextPlayerX
+
+        local nextPlayerY = playerY + currentSpeed * dt * dy
+        if getGridTile(playerX, nextPlayerY + (dy > 0 and 1 or 0), playerZ) ~= 0 then
+            nextPlayerY = playerY
+        end
+        playerY = nextPlayerY
     end
 end
 
 function love.draw()
-    -- love.graphics.draw(grass, 0, 0)
-
     spriteBatch:clear()
     for z = 1, GRID_SIZE do
+        local zShade = GRID_Z_SHADE_MIN + GRID_Z_SHADE_STEP * z
+        spriteBatch:setColor(zShade, zShade, zShade, 1)
+
         if z ~= playerZ then
             for x = 1, GRID_SIZE do
                 for y = 1, GRID_SIZE do
                     if grid[z][x][y] == 1 then
-                        -- love.graphics.draw(
-                        -- spriteBatch:add(gridCenterX + ((y - x) * blockWidth / 2), gridCenterY +
-                        --     ((x + y) * blockDepth / 2) - (blockDepth * gridSize / 2) - blockDepth * z)
                         local screenX, screenY = toScreenPosition(x, y, z)
                         spriteBatch:add(screenX, screenY)
                     end
@@ -167,7 +190,7 @@ function love.draw()
                         local screenX, screenY = toScreenPosition(x, y, z)
                         table.insert(sortingTable, {
                             x = screenX,
-                            y = screenY,
+                            y = screenY
                         })
                     end
                 end
@@ -176,22 +199,14 @@ function love.draw()
             local playerScreenX, playerScreenY = toScreenPosition(playerX, playerY, playerZ)
             table.insert(sortingTable, {
                 x = playerScreenX,
-                y = playerScreenY,
+                y = playerScreenY
             })
-
-            -- table.insert(sortingTable, {
-            --     x = playerX,
-            --     y = playerY - blockDepth * z
-            -- })
 
             table.sort(sortingTable, ysort)
 
             for _, sprite in ipairs(sortingTable) do
                 spriteBatch:add(sprite.x, sprite.y)
             end
-            
-            
-            -- spriteBatch:add(drawPlayerTileX, drawPlayerTileY)
         end
     end
 
