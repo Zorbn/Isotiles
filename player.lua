@@ -1,6 +1,6 @@
 Player = {
     SPEED = 3,
-    SIZE = 0.9,
+    SIZE = 0.95,
 }
 
 Player.new = function()
@@ -22,7 +22,7 @@ Player.new = function()
             local collisionOffsetX = dx > 0 and Player.SIZE or 0
             if map:getGridTile(nextX + collisionOffsetX, self.y, self.z) ~= 0 or
                map:getGridTile(nextX + collisionOffsetX, self.y + Player.SIZE, self.z) ~= 0 then
-                nextX = self.x
+               nextX = self.x
             end
             self.x = nextX
 

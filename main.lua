@@ -1,12 +1,15 @@
 require "map"
 require "player"
+require "camera"
 
+love.graphics.setDefaultFilter("nearest")
 local grass = love.graphics.newImage("grass.png")
 
 local BLOCK_WIDTH = grass:getWidth()
 local BLOCK_HEIGHT = grass:getHeight()
 local BLOCK_DEPTH = BLOCK_HEIGHT / 2
 
+local camera = Camera.new()
 local player = Player.new()
 local map = Map.new()
 
@@ -25,16 +28,16 @@ end
 map.grid[2][2][4] = 0
 map.grid[2][6][5] = 0
 
+local spriteBatch = love.graphics.newSpriteBatch(grass)
+
 local function toScreenPosition(x, y, z)
     local screenX = Map.GRID_CENTER_X + ((y - x) * BLOCK_WIDTH / 2)
     local screenY = Map.GRID_CENTER_Y + ((x + y) * BLOCK_DEPTH / 2) - (BLOCK_DEPTH * Map.GRID_SIZE / 2) - BLOCK_DEPTH * z
-    screenX = math.floor(screenX)
-    screenY = math.floor(screenY)
+    screenX = screenX * camera.scale + camera.offsetX
+    screenY = screenY * camera.scale + camera.offsetY
 
     return screenX, screenY
 end
-
-local spriteBatch = love.graphics.newSpriteBatch(grass)
 
 local function ysort(a, b)
     return a.y < b.y
@@ -92,7 +95,9 @@ function love.run()
     end
 end
 
-love.window.setVSync(0)
+function love.resize(width, height)
+    camera:resize(width, height)
+end
 
 function love.update(dt)
     local dx = 0
@@ -132,7 +137,7 @@ function love.draw()
                 for y = 1, Map.GRID_SIZE do
                     if map.grid[z][x][y] == 1 then
                         local screenX, screenY = toScreenPosition(x, y, z)
-                        spriteBatch:add(screenX, screenY)
+                        spriteBatch:add(screenX, screenY, 0, camera.scale, camera.scale)
                     end
                 end
             end
@@ -160,7 +165,7 @@ function love.draw()
             table.sort(sortingTable, ysort)
 
             for _, sprite in ipairs(sortingTable) do
-                spriteBatch:add(sprite.x, sprite.y)
+                spriteBatch:add(sprite.x, sprite.y, 0, camera.scale, camera.scale)
             end
         end
     end
