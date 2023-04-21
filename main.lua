@@ -1,21 +1,43 @@
-local grass = love.graphics.newImage("grass.png")
+require "map"
+require "player"
 
-local GRID_SIZE = 20
-local GRID_CENTER_X = 400
-local GRID_CENTER_Y = 300
-local GRID_MAX_Z = 2
-local GRID_Z_SHADE_MIN = 0.7
-local GRID_Z_SHADE_STEP = (1.0 - GRID_Z_SHADE_MIN) / GRID_MAX_Z
+local grass = love.graphics.newImage("grass.png")
 
 local BLOCK_WIDTH = grass:getWidth()
 local BLOCK_HEIGHT = grass:getHeight()
 local BLOCK_DEPTH = BLOCK_HEIGHT / 2
 
+local player = Player.new()
+local map = Map.new()
+
+for x = 1, Map.GRID_SIZE do
+    for y = 1, Map.GRID_SIZE do
+        map.grid[1][x][y] = 1
+    end
+end
+
+for x = 2, Map.GRID_SIZE / 2 do
+    for y = 2, Map.GRID_SIZE / 2 do
+        map.grid[2][x][y] = 1
+    end
+end
+
+map.grid[2][2][4] = 0
+map.grid[2][6][5] = 0
+
 local function toScreenPosition(x, y, z)
-    local screenX = GRID_CENTER_X + ((y - x) * BLOCK_WIDTH / 2)
-    local screenY = GRID_CENTER_Y + ((x + y) * BLOCK_DEPTH / 2) - (BLOCK_DEPTH * GRID_SIZE / 2) - BLOCK_DEPTH * z
+    local screenX = Map.GRID_CENTER_X + ((y - x) * BLOCK_WIDTH / 2)
+    local screenY = Map.GRID_CENTER_Y + ((x + y) * BLOCK_DEPTH / 2) - (BLOCK_DEPTH * Map.GRID_SIZE / 2) - BLOCK_DEPTH * z
+    screenX = math.floor(screenX)
+    screenY = math.floor(screenY)
 
     return screenX, screenY
+end
+
+local spriteBatch = love.graphics.newSpriteBatch(grass)
+
+local function ysort(a, b)
+    return a.y < b.y
 end
 
 function love.run()
@@ -72,55 +94,6 @@ end
 
 love.window.setVSync(0)
 
-local grid = {}
-for z = 1, GRID_SIZE do
-    grid[z] = {}
-    for x = 1, GRID_SIZE do
-        grid[z][x] = {}
-        for y = 1, GRID_SIZE do
-            grid[z][x][y] = 0
-        end
-    end
-end
-
-local function getGridTile(x, y, z)
-    x = math.floor(x)
-    y = math.floor(y)
-    z = math.floor(z)
-
-    if x < 1 or x > GRID_SIZE or y < 1 or y > GRID_SIZE or z < 1 or z > GRID_SIZE then
-        return 0
-    end
-    
-    return grid[z][x][y]
-end
-
-for x = 1, GRID_SIZE do
-    for y = 1, GRID_SIZE do
-        grid[1][x][y] = 1
-    end
-end
-
-for x = 2, GRID_SIZE / 2 do
-    for y = 2, GRID_SIZE / 2 do
-        grid[2][x][y] = 1
-    end
-end
-
-grid[2][2][4] = 0
-grid[2][6][5] = 0
-
-local spriteBatch = love.graphics.newSpriteBatch(grass)
-
-local playerX = 0
-local playerY = 0
-local playerZ = 2
-local playerSpeed = 3
-
-local function ysort(a, b)
-    return a.y < b.y
-end
-
 function love.update(dt)
     local dx = 0
     local dy = 0
@@ -145,37 +118,19 @@ function love.update(dt)
         dy = dy + 1
     end
 
-    local currentSpeed = love.keyboard.isDown("lshift") and 2 or 1
-    currentSpeed = currentSpeed * playerSpeed
-
-    if dx ~= 0 or dy ~= 0 then
-        local magnitude = math.sqrt(dx ^ 2 + dy ^ 2)
-        dx, dy = dx / magnitude, dy / magnitude
-
-        local nextPlayerX = playerX + currentSpeed * dt * dx
-        if getGridTile(nextPlayerX + (dx > 0 and 1 or 0), playerY, playerZ) ~= 0 then
-            nextPlayerX = playerX
-        end
-        playerX = nextPlayerX
-
-        local nextPlayerY = playerY + currentSpeed * dt * dy
-        if getGridTile(playerX, nextPlayerY + (dy > 0 and 1 or 0), playerZ) ~= 0 then
-            nextPlayerY = playerY
-        end
-        playerY = nextPlayerY
-    end
+    player:move(map, dx, dy, dt)
 end
 
 function love.draw()
     spriteBatch:clear()
-    for z = 1, GRID_SIZE do
-        local zShade = GRID_Z_SHADE_MIN + GRID_Z_SHADE_STEP * z
+    for z = 1, Map.GRID_SIZE do
+        local zShade = Map.GRID_Z_SHADE_MIN + Map.GRID_Z_SHADE_STEP * z
         spriteBatch:setColor(zShade, zShade, zShade, 1)
 
-        if z ~= playerZ then
-            for x = 1, GRID_SIZE do
-                for y = 1, GRID_SIZE do
-                    if grid[z][x][y] == 1 then
+        if z ~= player.z then
+            for x = 1, Map.GRID_SIZE do
+                for y = 1, Map.GRID_SIZE do
+                    if map.grid[z][x][y] == 1 then
                         local screenX, screenY = toScreenPosition(x, y, z)
                         spriteBatch:add(screenX, screenY)
                     end
@@ -184,9 +139,9 @@ function love.draw()
         else
             local sortingTable = {}
 
-            for x = 1, GRID_SIZE do
-                for y = 1, GRID_SIZE do
-                    if grid[z][x][y] == 1 then
+            for x = 1, Map.GRID_SIZE do
+                for y = 1, Map.GRID_SIZE do
+                    if map.grid[z][x][y] == 1 then
                         local screenX, screenY = toScreenPosition(x, y, z)
                         table.insert(sortingTable, {
                             x = screenX,
@@ -196,7 +151,7 @@ function love.draw()
                 end
             end
 
-            local playerScreenX, playerScreenY = toScreenPosition(playerX, playerY, playerZ)
+            local playerScreenX, playerScreenY = toScreenPosition(player.x, player.y, player.z)
             table.insert(sortingTable, {
                 x = playerScreenX,
                 y = playerScreenY
