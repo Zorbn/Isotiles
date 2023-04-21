@@ -17,8 +17,8 @@ Camera.new = function()
         
         self.scale = math.max(math.floor(self.scale), 1)
 
-        self.offsetX = (width - self.scale * Camera.VIEW_WIDTH) / 2
-        self.offsetY = (height - self.scale * Camera.VIEW_HEIGHT) / 2
+        self.offsetX = math.floor((width - self.scale * Camera.VIEW_WIDTH) / 2)
+        self.offsetY = math.floor((height - self.scale * Camera.VIEW_HEIGHT) / 2)
     end
     
     return newCamera

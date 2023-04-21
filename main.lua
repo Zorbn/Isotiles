@@ -3,7 +3,7 @@ require "player"
 require "camera"
 
 love.graphics.setDefaultFilter("nearest")
-local grass = love.graphics.newImage("grass.png")
+local grass = love.graphics.newImage("blank.png")
 
 local BLOCK_WIDTH = grass:getWidth()
 local BLOCK_HEIGHT = grass:getHeight()
@@ -25,8 +25,17 @@ for x = 2, Map.GRID_SIZE / 2 do
     end
 end
 
-map.grid[2][2][4] = 0
-map.grid[2][6][5] = 0
+map.grid[2][3][3] = 0
+map.grid[2][9][3] = 0
+
+map.grid[2][3][7] = 0
+map.grid[2][9][7] = 0
+
+map.grid[2][4][8] = 0
+map.grid[2][5][8] = 0
+map.grid[2][6][8] = 0
+map.grid[2][7][8] = 0
+map.grid[2][8][8] = 0
 
 local spriteBatch = love.graphics.newSpriteBatch(grass)
 
