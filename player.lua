@@ -9,7 +9,7 @@ Player.new = function()
         y = 0,
         z = 2,
     }
-        
+
     newPlayer.move = function(self, map, dx, dy, dt)
         local currentSpeed = love.keyboard.isDown("lshift") and 2 or 1
         currentSpeed = currentSpeed * Player.SPEED
@@ -17,7 +17,7 @@ Player.new = function()
         if dx ~= 0 or dy ~= 0 then
             local magnitude = math.sqrt(dx ^ 2 + dy ^ 2)
             dx, dy = dx / magnitude, dy / magnitude
-            
+
             local nextX = self.x + currentSpeed * dt * dx
             local collisionOffsetX = dx > 0 and Player.SIZE or 0
             if map:getGridTile(nextX + collisionOffsetX, self.y, self.z) ~= 0 or
@@ -35,6 +35,6 @@ Player.new = function()
             self.y = nextY
         end
     end
-    
+
     return newPlayer
 end

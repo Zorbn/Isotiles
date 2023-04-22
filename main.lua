@@ -3,10 +3,10 @@ require "player"
 require "camera"
 
 love.graphics.setDefaultFilter("nearest")
-local grass = love.graphics.newImage("blank.png")
+local tiles = love.graphics.newImage("tiles.png")
 
-local BLOCK_WIDTH = grass:getWidth()
-local BLOCK_HEIGHT = grass:getHeight()
+local BLOCK_WIDTH = 32
+local BLOCK_HEIGHT = 32
 local BLOCK_DEPTH = BLOCK_HEIGHT / 2
 
 local camera = Camera.new()
@@ -37,16 +37,54 @@ map.grid[2][6][8] = 0
 map.grid[2][7][8] = 0
 map.grid[2][8][8] = 0
 
-local spriteBatch = love.graphics.newSpriteBatch(grass)
+local spriteBatch = love.graphics.newSpriteBatch(tiles)
+local spritesInTexture = tiles:getWidth() / BLOCK_WIDTH
+local spriteBatchQuads = {}
+for i = 1, spritesInTexture do
+    local texX = (i - 1) * BLOCK_WIDTH
+    local quad = love.graphics.newQuad(texX, 0, BLOCK_WIDTH, BLOCK_HEIGHT, tiles)
+    spriteBatchQuads[i] = quad
+end
+
+local function spriteBatchAddByIndex(i, x, y, sx, sy)
+    spriteBatch:add(spriteBatchQuads[i], x, y, 0, sx, sy)
+end
 
 local function toScreenPosition(x, y, z)
     local screenX = Map.GRID_CENTER_X + ((y - x) * BLOCK_WIDTH / 2)
     local screenY = Map.GRID_CENTER_Y + ((x + y) * BLOCK_DEPTH / 2) - (BLOCK_DEPTH * Map.GRID_SIZE / 2) - BLOCK_DEPTH * z
-    screenX = screenX * camera.scale + camera.offsetX
-    screenY = screenY * camera.scale + camera.offsetY
+    -- screenX = screenX * camera.scale + camera.offsetX
+    -- screenY = screenY * camera.scale + camera.offsetY
 
     return screenX, screenY
 end
+
+local function toWorldPosition(screenX, screenY, worldZ)
+    local worldX = ((screenY - Map.GRID_CENTER_Y) / BLOCK_DEPTH) - ((screenX - Map.GRID_CENTER_X) / BLOCK_WIDTH) + 11 + worldZ
+    local worldY = ((screenY - Map.GRID_CENTER_Y) / BLOCK_DEPTH) + ((screenX - Map.GRID_CENTER_X) / BLOCK_WIDTH) + 10 + worldZ
+
+    return worldX, worldY
+end
+
+-- local function toWorldPosition(screenX, screenY, worldZ)
+--     -- Undo the translations done to get screenX.
+--     local a = (screenX - camera.offsetX) / camera.scale
+--     a = a - Map.GRID_CENTER_X
+--     a = a * 2 / BLOCK_WIDTH
+--     -- a = y - x
+
+--     -- Undo the translations done to get screenY.
+--     local b = (screenY - camera.offsetY) / camera.scale
+--     b = b - Map.GRID_CENTER_Y
+--     b = b + (BLOCK_DEPTH * Map.GRID_SIZE / 2) + BLOCK_DEPTH * worldZ
+--     b = b * 2 / BLOCK_DEPTH
+--     -- b = x + y
+
+--     local worldX = (b - a) / 2
+--     local worldY = (a + b) / 2
+
+--     return worldX, worldY
+-- end
 
 local function ysort(a, b)
     return a.y < b.y
@@ -133,6 +171,24 @@ function love.update(dt)
     end
 
     player:move(map, dx, dy, dt)
+
+    local mouseX = love.mouse.getX()
+    local mouseY = love.mouse.getY()
+
+    local mouseWorldZ = 2
+    local mouseWorldX, mouseWorldY = toWorldPosition(mouseX, mouseY, mouseWorldZ)
+    mouseWorldX = mouseWorldX - 0.5
+    mouseWorldY = mouseWorldY - 0.5
+
+    if love.mouse.isDown(1) then
+        map:setGridTile(mouseWorldX, mouseWorldY, mouseWorldZ, 0)
+    end
+
+    if love.mouse.isDown(2) then
+        -- Shift the tile up so that it feels as if it is being placed on top
+        -- of the face the player clicked on.
+        map:setGridTile(mouseWorldX - 1, mouseWorldY - 1, mouseWorldZ, 1)
+    end
 end
 
 function love.draw()
@@ -146,7 +202,11 @@ function love.draw()
                 for y = 1, Map.GRID_SIZE do
                     if map.grid[z][x][y] == 1 then
                         local screenX, screenY = toScreenPosition(x, y, z)
-                        spriteBatch:add(screenX, screenY, 0, camera.scale, camera.scale)
+                        local index = 1
+                        if x % 7 == 0 or y % 7 == 0 then
+                            index = 3
+                        end
+                        spriteBatchAddByIndex(index, screenX, screenY, camera.scale, camera.scale)
                     end
                 end
             end
@@ -174,7 +234,7 @@ function love.draw()
             table.sort(sortingTable, ysort)
 
             for _, sprite in ipairs(sortingTable) do
-                spriteBatch:add(sprite.x, sprite.y, 0, camera.scale, camera.scale)
+                spriteBatchAddByIndex(2, sprite.x, sprite.y, camera.scale, camera.scale)
             end
         end
     end

@@ -20,9 +20,22 @@ Map.new = function()
                z < 1 or z > Map.GRID_SIZE then
                 return 0
             end
-            
+
             return self.grid[z][x][y]
-        end
+        end,
+        setGridTile = function(self, x, y, z, tile)
+            x = math.floor(x)
+            y = math.floor(y)
+            z = math.floor(z)
+
+            if x < 1 or x > Map.GRID_SIZE or
+               y < 1 or y > Map.GRID_SIZE or
+               z < 1 or z > Map.GRID_SIZE then
+                return
+            end
+
+            self.grid[z][x][y] = tile
+        end,
     }
 
     -- Initialize the new map to all air.
